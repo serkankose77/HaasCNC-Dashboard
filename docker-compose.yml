@@ -1,0 +1,18 @@
+services:
+  dashboard:
+    build: .
+    image: se-mtc-dashboard:latest
+    container_name: se-mtc-dashboard
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # machines.json must exist on the host before `docker compose up`.
+      # Run:  cp machines.example.json machines.json  &&  edit it.
+      - ./machines.json:/app/machines.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8000/api/machines"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

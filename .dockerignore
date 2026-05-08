@@ -1,0 +1,20 @@
+.git
+.gitignore
+.github
+.vscode
+.idea
+__pycache__
+*.pyc
+.DS_Store
+*.swp
+README.md
+LICENSE
+
+# CRITICAL: never bake real IPs into the image
+machines.json
+
+# Docker build artifacts shouldn't be in the build context
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml

@@ -8,8 +8,9 @@ __pycache__/
 .venv/
 venv/
 
-# Editors
+# Editors / tooling
 .vscode/
 .idea/
+.claude/
 *.swp
 .DS_Store

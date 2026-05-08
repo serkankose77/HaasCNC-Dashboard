@@ -165,6 +165,39 @@ Veya Raspberry Pi'de Chromium ile aynı bayraklar; Pi'yi shop floor TV'ye HDMI'l
 
 ## Production deployment
 
+### Docker (önerilen)
+
+Repoda `Dockerfile` + `docker-compose.yml` hazır. Image stdlib-only Python — runtime dependency yok, alpine base ~50 MB.
+
+```bash
+# 1) Hedef sunucuya repoyu klonla
+git clone https://github.com/serkankose77/HaasCNC-Dashboard.git
+cd HaasCNC-Dashboard
+
+# 2) Makina listesini hazırla (image'a kopyalanmaz, volume olarak mount edilir)
+cp machines.example.json machines.json
+$EDITOR machines.json
+
+# 3) Build + run
+docker compose up -d --build
+
+# Logs
+docker compose logs -f
+
+# Restart sonrası config değişti? Sadece restart yeter (rebuild gerekmez)
+docker compose restart
+```
+
+Dashboard `http://<server>:8000` üzerinde. `machines.json` read-only volume olarak `/app/machines.json` adresine mount edilir — image değişmeden config güncellenebilir.
+
+**Network notu:** Container'ın MTConnect agent'larına ulaşabilmesi için host'tan o IP'lere route olması yeterli. Default bridge network çoğu setup'ta çalışır. Linux'ta aynı LAN'da değilseniz `network_mode: host` ekleyebilirsiniz (compose dosyasında).
+
+**Healthcheck:** Built-in. `docker ps` STATUS kolonunda `healthy`/`unhealthy` görünür; `/api/machines` 200 dönmüyorsa unhealthy olur ve restart policy tetiklenir.
+
+### systemd (Docker'sız)
+
+Python stdlib only çalıştığı için sade:
+
 ```ini
 # /etc/systemd/system/se-mtc-dashboard.service
 [Unit]
@@ -183,14 +216,7 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-Veya Docker:
-```dockerfile
-FROM python:3.12-alpine
-WORKDIR /app
-COPY server.py dashboard.html ./
-EXPOSE 8000
-CMD ["python3", "-u", "server.py"]
-```
+`/opt/mtc-dashboard/`'a `server.py`, `dashboard.html`, `machines.json` koy. `machines.example.json` opsiyonel (tek başına `machines.json` yeter).
 
 ## Bilinen kısıtlamalar
 
