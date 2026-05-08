@@ -1,0 +1,15 @@
+# Local machine config — contains real shop-floor IPs.
+# Copy machines.example.json -> machines.json and edit with your hosts.
+machines.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store

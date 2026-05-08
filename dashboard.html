@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SE Havacılık · MTConnect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #0a0d12;
+    --panel: #131822;
+    --panel-2: #1a212d;
+    --border: #232c3b;
+    --text: #e8ecf2;
+    --text-dim: #7d8898;
+    --text-faint: #4a5468;
+    --accent: #22d3a8;
+    --warn: #f59e0b;
+    --alarm: #ef4444;
+    --info: #38bdf8;
+    --lathe: #c084fc;       /* lathe-specific accent */
+    --grid-line: rgba(35, 44, 59, 0.45);
+    --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
+    --sans: 'IBM Plex Sans Condensed', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); }
+
+body {
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 14px;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Header ===== */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+}
+header h1 {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+header h1 .accent { color: var(--accent); }
+.header-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+}
+.fleet-summary { color: var(--text); }
+.fleet-summary .num-active  { color: var(--accent); font-weight: 700; }
+.fleet-summary .num-idle    { color: var(--info); }
+.fleet-summary .num-offline { color: var(--alarm); }
+
+/* ===== Machine Summary Strip ===== */
+.machines-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.summary-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 16px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+.summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.summary-card:hover { border-color: var(--text-faint); }
+.summary-card.selected {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--panel) 0%, rgba(34, 211, 168, 0.03) 100%);
+}
+.summary-card.selected::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 3px;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+}
+.summary-card.lathe.selected {
+    border-color: var(--lathe);
+    background: linear-gradient(180deg, var(--panel) 0%, rgba(192, 132, 252, 0.04) 100%);
+}
+.summary-card.lathe.selected::after {
+    background: var(--lathe);
+    box-shadow: 0 0 12px var(--lathe);
+}
+.summary-card.offline {
+    opacity: 0.65;
+}
+
+.sm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+.sm-title {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.sm-name {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+}
+.sm-name .type-tag {
+    font-size: 9px;
+    color: var(--text-faint);
+    margin-left: 6px;
+    letter-spacing: 0.15em;
+}
+.sm-name .type-tag.lathe { color: var(--lathe); }
+.sm-model {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+}
+.sm-conn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+.dot.live { background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+.dot.dead { background: var(--alarm); box-shadow: 0 0 10px var(--alarm); }
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.sm-exec {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+}
+.exec-ACTIVE { color: var(--accent); }
+.exec-FEED_HOLD, .exec-INTERRUPTED { color: var(--warn); }
+.exec-STOPPED { color: var(--alarm); }
+.exec-READY, .exec-PROGRAM_COMPLETED { color: var(--info); }
+.exec-UNAVAILABLE { color: var(--text-faint); }
+.exec-OFFLINE { color: var(--alarm); }
+
+.sm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+.sm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+.sm-lbl {
+    color: var(--text-faint);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+.sm-val {
+    color: var(--text);
+    font-weight: 500;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+.sm-val.accent { color: var(--accent); }
+.sm-val.info { color: var(--info); }
+.sm-row-wide { grid-column: span 2; }
+
+/* ===== Detail Divider ===== */
+.detail-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 22px 0 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+.detail-divider::before,
+.detail-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+.detail-divider .machine-name {
+    color: var(--accent);
+    font-weight: 700;
+}
+.detail-divider .machine-name.lathe { color: var(--lathe); }
+
+/* ===== Detail Grid ===== */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 12px;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+}
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.25;
+}
+
+.card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.big-num {
+    font-family: var(--mono);
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Status */
+.status-card { grid-column: span 4; }
+.status-card .big-num { font-size: 30px; }
+.status-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+}
+.meta-label { color: var(--text-faint); font-size: 10px; letter-spacing: 0.12em; display: block; margin-bottom: 4px; }
+.meta-val { color: var(--text); font-weight: 500; }
+.meta-val.ARMED { color: var(--accent); }
+.meta-val.TRIGGERED { color: var(--alarm); }
+
+/* Spindle */
+.spindle-card {
+    grid-column: span 4;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.spindle-card .big-num { font-size: 56px; color: var(--accent); margin: 8px 0 4px; }
+.spindle-card .unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+}
+.spindle-card .ovr { color: var(--text); font-weight: 600; }
+
+/* Program */
+.program-card { grid-column: span 4; }
+.program-name {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--info);
+    word-break: break-all;
+    margin-bottom: 14px;
+    min-height: 36px;
+    line-height: 1.3;
+}
+.counter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+.counter {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px;
+    text-align: center;
+}
+.counter-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+.counter-lbl {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.12em;
+    margin-top: 4px;
+}
+
+/* Bars */
+.overrides { grid-column: span 6; }
+.axes-card  { grid-column: span 6; }
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 64px;
+    gap: 14px;
+    align-items: center;
+    padding: 9px 0;
+}
+.bar-row + .bar-row { border-top: 1px solid var(--border); }
+.bar-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    font-weight: 500;
+}
+.bar-track {
+    height: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+}
+.bar-track::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--text-faint);
+    opacity: 0.4;
+}
+.bar-fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+.bar-fill.over { background: var(--warn); }
+.bar-fill.under { background: var(--info); }
+.bar-fill.high-load { background: var(--alarm); }
+.bar-val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
+    color: var(--text);
+}
+
+.empty-msg {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    padding: 14px 0;
+    text-align: center;
+    letter-spacing: 0.1em;
+}
+
+/* Position */
+.position-card { grid-column: span 6; }
+.pos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+}
+.pos-axis {
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.pos-axis-label {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+}
+.pos-axis-label.linear { color: var(--accent); }
+.pos-axis-label.rotary { color: var(--info); }
+.pos-axis-val {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+}
+.pos-axis-unit {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+    margin-top: 4px;
+}
+
+/* Tool */
+.tool-card { grid-column: span 3; }
+.tool-num {
+    font-family: var(--mono);
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--info);
+    line-height: 1;
+    margin-bottom: 14px;
+}
+.tool-prefix { font-size: 22px; color: var(--text-dim); margin-right: 2px; }
+.tool-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+.tool-meta-row { display: flex; flex-direction: column; gap: 2px; }
+.tool-meta-row .lbl { color: var(--text-faint); font-size: 9px; letter-spacing: 0.1em; }
+.tool-meta-row .val { color: var(--text); font-weight: 500; word-break: break-all; }
+
+/* Cycle */
+.cycle-card { grid-column: span 3; }
+.cycle-stack { display: flex; flex-direction: column; gap: 8px; }
+.cycle-stack > div {
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+.cycle-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+    margin-bottom: 4px;
+}
+.cycle-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+/* Macros + offsets */
+.macros-card  { grid-column: span 6; }
+.offsets-card { grid-column: span 6; }
+
+.macro-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 13px;
+}
+.macro-row + .macro-row { border-top: 1px solid var(--border); }
+.macro-lbl { color: var(--text-faint); font-size: 10px; letter-spacing: 0.1em; }
+.macro-val { color: var(--accent); font-weight: 600; word-break: break-all; }
+
+.offset-row {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 10px;
+    padding: 6px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+.offset-row + .offset-row { border-top: 1px solid var(--border); }
+.offset-name { color: var(--text-dim); font-weight: 600; }
+.offset-val  { color: var(--text); font-size: 10px; word-break: break-all; }
+
+/* Alarms */
+.alarms-card { grid-column: span 12; }
+.alarms-list {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    background: var(--bg);
+    padding: 12px;
+    border: 1px solid var(--border);
+    min-height: 60px;
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-dim);
+}
+.alarms-list.has-alarms {
+    border-color: var(--alarm);
+    color: var(--alarm);
+    background: rgba(239, 68, 68, 0.04);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .status-card, .spindle-card, .program-card,
+    .overrides, .axes-card, .position-card,
+    .tool-card, .cycle-card,
+    .macros-card, .offsets-card { grid-column: span 12; }
+}
+
+/* ===== TV Mode (shop floor display, ?mode=tv) ===== */
+body.tv {
+    padding: 12px;
+    overflow: hidden;
+    height: 100vh;
+}
+body.tv header,
+body.tv .detail-divider,
+body.tv #detail-grid {
+    display: none !important;
+}
+
+body.tv .machines-strip {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    height: calc(100vh - 24px);
+    margin-bottom: 0;
+}
+
+body.tv .summary-card {
+    padding: 22px 20px;
+    cursor: default;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+body.tv .summary-card::before {
+    height: 2px;
+    opacity: 0.6;
+}
+
+body.tv .sm-head { margin-bottom: 0; }
+body.tv .sm-name {
+    font-size: clamp(20px, 1.6vw, 28px);
+    letter-spacing: 0.04em;
+}
+body.tv .sm-name .type-tag { font-size: 11px; }
+body.tv .sm-model { display: none; }
+body.tv .sm-conn {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+body.tv .dot { width: 12px; height: 12px; }
+
+body.tv .sm-exec {
+    font-size: clamp(40px, 4.2vw, 68px);
+    line-height: 1.02;
+    margin: 0;
+    text-align: center;
+    word-break: break-word;
+    flex-shrink: 0;
+    padding: 6px 0;
+}
+
+body.tv .sm-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    font-size: 14px;
+    flex: 1;
+    align-content: start;
+}
+body.tv .sm-row {
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    justify-content: flex-start;
+}
+body.tv .sm-row + .sm-row { border-top: none; }
+body.tv .sm-row.sm-row-wide {
+    grid-column: span 2;
+}
+body.tv .sm-lbl {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+}
+body.tv .sm-val {
+    font-size: clamp(16px, 1.3vw, 22px);
+    text-align: left;
+    width: 100%;
+}
+
+/* TV overlay: clock + fleet summary in bottom-right */
+.tv-overlay {
+    position: fixed;
+    bottom: 10px;
+    right: 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-align: right;
+    pointer-events: none;
+    z-index: 1000;
+    display: none;
+    line-height: 1.5;
+}
+body.tv .tv-overlay { display: block; }
+.tv-overlay .tv-fleet { color: var(--text); }
+.tv-overlay .tv-fleet .num-active  { color: var(--accent); font-weight: 700; }
+.tv-overlay .tv-fleet .num-idle    { color: var(--info); }
+.tv-overlay .tv-fleet .num-offline { color: var(--alarm); font-weight: 700; }
+
+/* TV hint that auto-fades */
+.tv-hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    padding: 18px 28px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: 0.1em;
+    z-index: 2000;
+    pointer-events: none;
+    animation: tvHintFade 5s forwards;
+    box-shadow: 0 0 30px rgba(34, 211, 168, 0.2);
+}
+@keyframes tvHintFade {
+    0%, 70% { opacity: 1; }
+    100%    { opacity: 0; visibility: hidden; }
+}
+
+/* Fallback for narrower TVs / portrait monitors */
+@media (max-width: 1500px) {
+    body.tv .machines-strip {
+        grid-template-columns: repeat(3, 1fr);
+        height: auto;
+        min-height: calc(100vh - 24px);
+    }
+    body.tv .summary-card { min-height: 280px; }
+}
+@media (max-width: 900px) {
+    body.tv .machines-strip {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>SE Havacılık <span class="accent">// MTCONNECT</span></h1>
+    <div class="header-meta">
+        <span class="fleet-summary" id="fleet-summary">—</span>
+        <span id="clock">--:--:--</span>
+    </div>
+</header>
+
+<!-- Machine summary cards (always visible, click to switch detail view) -->
+<div class="machines-strip" id="machines-strip">
+    <div style="font-family: var(--mono); padding: 20px; color: var(--text-dim); grid-column: 1/-1;">Loading machines…</div>
+</div>
+
+<!-- Section divider showing which machine is in detail view -->
+<div class="detail-divider">
+    <span>Detail View</span>
+    <span class="machine-name" id="detail-machine-name">—</span>
+    <span id="detail-last-update">—</span>
+</div>
+
+<!-- Detail dashboard for selected machine -->
+<div class="grid" id="detail-grid">
+
+    <div class="card status-card">
+        <div class="card-label">Execution</div>
+        <div class="big-num exec-UNAVAILABLE" id="exec-status">—</div>
+        <div class="status-meta">
+            <div>
+                <span class="meta-label">MODE</span>
+                <span class="meta-val" id="meta-mode">—</span>
+            </div>
+            <div>
+                <span class="meta-label">E-STOP</span>
+                <span class="meta-val" id="meta-estop">—</span>
+            </div>
+            <div>
+                <span class="meta-label">AVAIL</span>
+                <span class="meta-val" id="meta-avail">—</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card spindle-card">
+        <div class="card-label">Spindle</div>
+        <div>
+            <div class="big-num" id="spindle-rpm">0</div>
+            <div class="unit">RPM</div>
+        </div>
+        <div class="unit" style="margin-top: 12px;">OVERRIDE <span class="ovr" id="spindle-ovr">—</span>%</div>
+    </div>
+
+    <div class="card program-card">
+        <div class="card-label">Active Program</div>
+        <div class="program-name" id="program-name">—</div>
+        <div class="counter-row">
+            <div class="counter">
+                <div class="counter-val" id="m30-1">—</div>
+                <div class="counter-lbl">M30 #1</div>
+            </div>
+            <div class="counter">
+                <div class="counter-val" id="m30-2">—</div>
+                <div class="counter-lbl">M30 #2</div>
+            </div>
+            <div class="counter">
+                <div class="counter-val" id="loops-rem">—</div>
+                <div class="counter-lbl">LOOPS</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card overrides">
+        <div class="card-label">Overrides</div>
+        <div class="bar-row">
+            <span class="bar-label">FEED</span>
+            <div class="bar-track"><div class="bar-fill" id="feed-bar" style="width: 0%"></div></div>
+            <span class="bar-val" id="feed-val">—</span>
+        </div>
+        <div class="bar-row">
+            <span class="bar-label">RAPID</span>
+            <div class="bar-track"><div class="bar-fill" id="rapid-bar" style="width: 0%"></div></div>
+            <span class="bar-val" id="rapid-val">—</span>
+        </div>
+        <div class="bar-row">
+            <span class="bar-label">SPINDLE</span>
+            <div class="bar-track"><div class="bar-fill" id="sp-bar" style="width: 0%"></div></div>
+            <span class="bar-val" id="sp-val">—</span>
+        </div>
+    </div>
+
+    <div class="card axes-card">
+        <div class="card-label">Axis Load</div>
+        <div id="loads-container"></div>
+    </div>
+
+    <div class="card position-card">
+        <div class="card-label">Machine Position · Actual</div>
+        <div class="pos-grid" id="positions-container"></div>
+    </div>
+
+    <div class="card tool-card">
+        <div class="card-label" id="tool-card-label">Active Tool</div>
+        <div class="tool-num"><span class="tool-prefix">T</span><span id="tool-id">—</span></div>
+        <div class="tool-meta" id="tool-meta-container"></div>
+    </div>
+
+    <div class="card cycle-card">
+        <div class="card-label">Cycle Time</div>
+        <div class="cycle-stack">
+            <div>
+                <div class="cycle-label">THIS</div>
+                <div class="cycle-val" id="this-cycle">—</div>
+            </div>
+            <div>
+                <div class="cycle-label">LAST</div>
+                <div class="cycle-val" id="last-cycle">—</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card macros-card">
+        <div class="card-label">Macro Displays · Active Codes</div>
+        <div class="macro-row">
+            <span class="macro-lbl">MACRO 1</span>
+            <span class="macro-val" id="macro-1">—</span>
+        </div>
+        <div class="macro-row">
+            <span class="macro-lbl">MACRO 2</span>
+            <span class="macro-val" id="macro-2">—</span>
+        </div>
+        <div class="macro-row">
+            <span class="macro-lbl">G-CODES</span>
+            <span class="macro-val" id="active-gcodes">—</span>
+        </div>
+        <div class="macro-row">
+            <span class="macro-lbl">D/H/M/T</span>
+            <span class="macro-val" id="active-dhmt">—</span>
+        </div>
+    </div>
+
+    <div class="card offsets-card">
+        <div class="card-label">Work Offsets</div>
+        <div id="offsets-container"></div>
+    </div>
+
+    <div class="card alarms-card">
+        <div class="card-label">Active Alarms · Event Log</div>
+        <div class="alarms-list" id="alarms-text">No active alarms</div>
+    </div>
+
+</div>
+
+<script>
+'use strict';
+
+const POLL_MS = 1000;
+const LINEAR_AXES = ['x', 'y', 'z'];
+const ROTARY_AXES = ['a', 'b', 'c'];
+const ALL_AXES    = [...LINEAR_AXES, ...ROTARY_AXES];
+
+const $ = (id) => document.getElementById(id);
+
+// ---- Application state -----------------------------------------------------
+const state = {
+    machines: [],   // [{id, name, model, type}, ...]
+    data: {},       // {id: {items, lastUpdate, error}}
+    selected: null,
+};
+
+// ---- TV mode detection (?mode=tv for shop-floor display) ------------------
+const params  = new URLSearchParams(window.location.search);
+const TV_MODE = params.get('mode') === 'tv';
+
+// ---- Generic helpers -------------------------------------------------------
+function val(items, id, fallback = null) {
+    const it = items[id];
+    if (!it) return fallback;
+    if (it.value === 'UNAVAILABLE' || it.value === '' || it.value == null) return fallback;
+    return it.value;
+}
+
+function num(items, id, decimals = 0) {
+    const v = val(items, id);
+    if (v === null) return '—';
+    const n = parseFloat(v);
+    if (isNaN(n)) return v;
+    return n.toFixed(decimals);
+}
+
+function fmtTime(s) {
+    const v = parseFloat(s);
+    if (isNaN(v) || v < 0) return '—';
+    const h = Math.floor(v / 3600);
+    const m = Math.floor((v % 3600) / 60);
+    const sec = Math.floor(v % 60);
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function parseStream(xmlText) {
+    const xml = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const err = xml.querySelector('parsererror');
+    if (err) throw new Error('XML parse error');
+    const items = {};
+    xml.querySelectorAll('[dataItemId]').forEach(el => {
+        const id = el.getAttribute('dataItemId');
+        items[id] = {
+            value: (el.textContent || '').trim(),
+            type: el.tagName,
+            timestamp: el.getAttribute('timestamp'),
+            sequence: el.getAttribute('sequence')
+        };
+    });
+    return items;
+}
+
+function getMachine(id) {
+    return state.machines.find(m => m.id === id);
+}
+
+// ---- Tool DataItem maps (mill vs lathe) -----------------------------------
+// Haas exposes COMPLETELY different DataItem IDs for lathe tooling,
+// so we need a per-type lookup.
+const TOOL_FIELDS = {
+    mill: {
+        id: 'toolid',
+        rows: [
+            { lbl: 'L GEO',   src: 'lengthgeo', decimals: 3 },
+            { lbl: 'L WEAR',  src: 'lengthwear', decimals: 4 },
+            { lbl: 'D GEO',   src: 'diamgeo', decimals: 3 },
+            { lbl: 'POCKET',  src: 'pocket' },
+        ],
+    },
+    lathe: {
+        id: 'toolidlathe',
+        rows: [
+            { lbl: 'X GEO',   src: 'xgeometry',     decimals: 3 },
+            { lbl: 'X WEAR',  src: 'xwear',         decimals: 4 },
+            { lbl: 'Z GEO',   src: 'zgeometry',     decimals: 3 },
+            { lbl: 'Z WEAR',  src: 'zwear',         decimals: 4 },
+            { lbl: 'D GEO',   src: 'diamgeolathe',  decimals: 3 },
+            { lbl: 'D WEAR',  src: 'diamwearlathe', decimals: 4 },
+            { lbl: 'TIP',     src: 'tip' },
+            { lbl: 'POCKET',  src: 'pocketlathe' },
+        ],
+    },
+};
+
+// ---- Bootstrap -------------------------------------------------------------
+async function loadMachines() {
+    const r = await fetch('/api/machines');
+    state.machines = await r.json();
+
+    // Restore previous selection from localStorage if still valid
+    const saved = localStorage.getItem('selected-machine');
+    if (saved && state.machines.some(m => m.id === saved)) {
+        state.selected = saved;
+    } else if (state.machines.length > 0) {
+        state.selected = state.machines[0].id;
+    }
+
+    buildSummaryCards();
+    renderDetailHeader();
+}
+
+function buildSummaryCards() {
+    const strip = $('machines-strip');
+    strip.innerHTML = '';
+    state.machines.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        if (m.type === 'lathe') card.classList.add('lathe');
+        card.id = `summary-${m.id}`;
+        card.dataset.machineId = m.id;
+        const typeTag = m.type === 'lathe'
+            ? '<span class="type-tag lathe">LATHE</span>'
+            : '<span class="type-tag">MILL</span>';
+        card.innerHTML = `
+            <div class="sm-head">
+                <div class="sm-title">
+                    <span class="sm-name">${escapeHTML(m.name)} ${typeTag}</span>
+                    <span class="sm-model">${escapeHTML(m.model)}</span>
+                </div>
+                <div class="sm-conn">
+                    <span class="dot"></span>
+                    <span class="sm-status-text">connecting</span>
+                </div>
+            </div>
+            <div class="sm-exec exec-UNAVAILABLE">—</div>
+            <div class="sm-grid">
+                <div class="sm-row"><span class="sm-lbl">Tool</span><span class="sm-val info sm-tool">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">Spindle</span><span class="sm-val accent sm-rpm">— RPM</span></div>
+                <div class="sm-row"><span class="sm-lbl">Mode</span><span class="sm-val sm-mode">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">E-Stop</span><span class="sm-val sm-estop">—</span></div>
+                <div class="sm-row sm-row-wide"><span class="sm-lbl">Program</span><span class="sm-val info sm-program">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">This</span><span class="sm-val accent sm-this">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">Last</span><span class="sm-val sm-last">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">M30 #1</span><span class="sm-val sm-m30-1">—</span></div>
+                <div class="sm-row"><span class="sm-lbl">M30 #2</span><span class="sm-val sm-m30-2">—</span></div>
+            </div>
+        `;
+        card.addEventListener('click', () => selectMachine(m.id));
+        strip.appendChild(card);
+    });
+    updateSelectionUI();
+}
+
+function selectMachine(id) {
+    if (state.selected === id) return;
+    state.selected = id;
+    localStorage.setItem('selected-machine', id);
+    updateSelectionUI();
+    renderDetailHeader();
+    renderDetail();
+}
+
+function updateSelectionUI() {
+    state.machines.forEach(m => {
+        const card = $(`summary-${m.id}`);
+        if (card) card.classList.toggle('selected', m.id === state.selected);
+    });
+}
+
+function renderDetailHeader() {
+    const m = getMachine(state.selected);
+    const el = $('detail-machine-name');
+    el.textContent = m ? `${m.name} · ${m.type === 'lathe' ? 'LATHE' : 'MILL'}` : '—';
+    el.className = 'machine-name' + (m && m.type === 'lathe' ? ' lathe' : '');
+}
+
+function updateFleetSummary() {
+    let active = 0, idle = 0, off = 0, alarm = 0;
+    state.machines.forEach(m => {
+        const data = state.data[m.id];
+        if (!data || data.error) { off++; return; }
+        const exec = val(data.items, 'rstat', 'UNAVAILABLE');
+        const alarms = val(data.items, 'aalarms', '');
+        if (alarms && alarms.toUpperCase() !== 'NONE') alarm++;
+        if (exec === 'ACTIVE') active++;
+        else if (exec === 'STOPPED' || exec === 'INTERRUPTED' || exec === 'FEED_HOLD') idle++;
+        else idle++;
+    });
+    const parts = [
+        `<span class="num-active">${active}</span> ACTIVE`,
+        `<span class="num-idle">${idle}</span> IDLE`,
+        `<span class="num-offline">${off}</span> OFFLINE`,
+    ];
+    if (alarm > 0) parts.push(`<span class="num-offline">${alarm}</span> ALARM`);
+    $('fleet-summary').innerHTML = parts.join(' · ');
+    // Mirror to TV overlay if present
+    const tvFleet = document.querySelector('.tv-overlay .tv-fleet');
+    if (tvFleet) tvFleet.innerHTML = parts.join(' · ');
+}
+
+// ---- Polling ---------------------------------------------------------------
+async function pollMachine(id) {
+    try {
+        const r = await fetch(`/mtc/${id}/current`, { cache: 'no-store' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const text = await r.text();
+        const items = parseStream(text);
+        state.data[id] = { items, lastUpdate: new Date(), error: null };
+    } catch (e) {
+        const prev = state.data[id] || {};
+        state.data[id] = {
+            items: prev.items || {},
+            lastUpdate: prev.lastUpdate || null,
+            error: e.message
+        };
+    }
+    renderSummaryCard(id);
+    if (id === state.selected) renderDetail();
+}
+
+async function pollAll() {
+    await Promise.allSettled(state.machines.map(m => pollMachine(m.id)));
+    updateFleetSummary();
+}
+
+// ---- Summary card render ---------------------------------------------------
+function renderSummaryCard(id) {
+    const card = $(`summary-${id}`);
+    if (!card) return;
+    const machine = getMachine(id);
+    const data = state.data[id] || { items: {}, error: 'no data' };
+    const items = data.items;
+
+    const isOffline = !!data.error;
+    card.classList.toggle('offline', isOffline);
+
+    const exec = isOffline
+        ? 'OFFLINE'
+        : val(items, 'rstat', 'UNAVAILABLE');
+    const execEl = card.querySelector('.sm-exec');
+    execEl.textContent = exec.replace(/_/g, ' ');
+    execEl.className = 'sm-exec exec-' + exec;
+
+    const toolField = (machine?.type === 'lathe') ? 'toolidlathe' : 'toolid';
+    card.querySelector('.sm-tool').textContent     = 'T' + (val(items, toolField, '—'));
+    card.querySelector('.sm-rpm').textContent      = num(items, 'sspeed') + ' RPM';
+    card.querySelector('.sm-mode').textContent     = val(items, 'mode', '—');
+    card.querySelector('.sm-estop').textContent    = val(items, 'estop', '—');
+    card.querySelector('.sm-program').textContent  = val(items, 'ncprog', '—');
+    card.querySelector('.sm-this').textContent     = fmtTime(val(items, 'tcycle', 0));
+    card.querySelector('.sm-last').textContent     = fmtTime(val(items, 'lcycle', 0));
+    card.querySelector('.sm-m30-1').textContent    = val(items, 'm30c1', '—');
+    card.querySelector('.sm-m30-2').textContent    = val(items, 'm30c2', '—');
+
+    const dot = card.querySelector('.dot');
+    const txt = card.querySelector('.sm-status-text');
+    if (data.error) {
+        dot.className = 'dot dead';
+        txt.textContent = data.error.length > 22 ? data.error.slice(0, 22) + '…' : data.error;
+    } else {
+        dot.className = 'dot live';
+        txt.textContent = data.lastUpdate
+            ? data.lastUpdate.toLocaleTimeString('tr-TR')
+            : '—';
+    }
+}
+
+// ---- Detail render helpers -------------------------------------------------
+function setBar(barId, valId, value, opts = {}) {
+    const { max = 100, mode = 'load', highLoad = 80 } = opts;
+    const v = parseFloat(value);
+    const bar = $(barId);
+    const lab = $(valId);
+    bar.className = 'bar-fill';
+    if (isNaN(v) || value === null) {
+        lab.textContent = '—';
+        bar.style.width = '0%';
+        return;
+    }
+    lab.textContent = v.toFixed(0) + '%';
+    const pct = Math.min(100, Math.max(0, (v / max) * 100));
+    bar.style.width = pct + '%';
+    if (mode === 'override') {
+        if (v > 100) bar.classList.add('over');
+        else if (v < 100) bar.classList.add('under');
+    } else {
+        if (v >= highLoad) bar.classList.add('high-load');
+        else if (v >= 50) bar.classList.add('over');
+    }
+}
+
+function renderPositions(items) {
+    const container = $('positions-container');
+    const rows = [];
+    ALL_AXES.forEach(axis => {
+        const v = val(items, `${axis}_axis_actual_position`);
+        if (v === null) return;
+        const n = parseFloat(v);
+        const display = isNaN(n) ? v : n.toFixed(3);
+        const isLin = LINEAR_AXES.includes(axis);
+        rows.push(`
+            <div class="pos-axis">
+                <div class="pos-axis-label ${isLin ? 'linear' : 'rotary'}">${axis.toUpperCase()}</div>
+                <div class="pos-axis-val">${display}</div>
+                <div class="pos-axis-unit">${isLin ? 'MM' : 'DEG'}</div>
+            </div>
+        `);
+    });
+    container.innerHTML = rows.length
+        ? rows.join('')
+        : '<div class="empty-msg">No axis position data</div>';
+}
+
+function renderLoads(items) {
+    const container = $('loads-container');
+    const presentAxes = ALL_AXES.filter(a => val(items, `${a}_axis_load`) !== null);
+    if (presentAxes.length === 0) {
+        container.innerHTML = '<div class="empty-msg">No axis load data published</div>';
+        return;
+    }
+    container.innerHTML = presentAxes.map(axis => `
+        <div class="bar-row">
+            <span class="bar-label">${axis.toUpperCase()}</span>
+            <div class="bar-track"><div class="bar-fill" id="load-bar-${axis}" style="width: 0%"></div></div>
+            <span class="bar-val" id="load-val-${axis}">—</span>
+        </div>
+    `).join('');
+    presentAxes.forEach(axis => {
+        setBar(`load-bar-${axis}`, `load-val-${axis}`, val(items, `${axis}_axis_load`), { mode: 'load' });
+    });
+}
+
+function renderTool(items, machineType) {
+    const cfg = TOOL_FIELDS[machineType] || TOOL_FIELDS.mill;
+    $('tool-card-label').textContent = (machineType === 'lathe' ? 'Active Turret Position' : 'Active Tool');
+    $('tool-id').textContent = val(items, cfg.id, '—');
+    const rows = cfg.rows.map(r => {
+        const v = (r.decimals != null) ? num(items, r.src, r.decimals) : (val(items, r.src, '—'));
+        return `
+            <div class="tool-meta-row">
+                <span class="lbl">${r.lbl}</span>
+                <span class="val">${escapeHTML(v)}</span>
+            </div>
+        `;
+    });
+    $('tool-meta-container').innerHTML = rows.join('');
+}
+
+function renderOffsets(items) {
+    const offsets = ['g54','g55','g56','g57','g58','g59','g154','g92'];
+    const container = $('offsets-container');
+    const rows = offsets
+        .map(id => {
+            const v = val(items, id);
+            if (v === null) return null;
+            return `<div class="offset-row"><span class="offset-name">${id.toUpperCase()}</span><span class="offset-val">${escapeHTML(v)}</span></div>`;
+        })
+        .filter(Boolean);
+    container.innerHTML = rows.length
+        ? rows.join('')
+        : '<div class="empty-msg">No work offset data</div>';
+}
+
+function renderDetail() {
+    const data = state.data[state.selected];
+    const machine = getMachine(state.selected);
+    if (!data || !machine) return;
+    const items = data.items;
+
+    if (data.lastUpdate) {
+        $('detail-last-update').textContent = '· last update ' + data.lastUpdate.toLocaleTimeString('tr-TR');
+    }
+    if (data.error) {
+        $('detail-last-update').textContent = '· OFFLINE: ' + data.error;
+    }
+
+    // Status
+    const exec = val(items, 'rstat', 'UNAVAILABLE');
+    const execEl = $('exec-status');
+    execEl.textContent = exec.replace(/_/g, ' ');
+    execEl.className = 'big-num exec-' + exec;
+
+    $('meta-mode').textContent = val(items, 'mode', '—');
+    const estop = val(items, 'estop', '—');
+    const estopEl = $('meta-estop');
+    estopEl.textContent = estop;
+    estopEl.className = 'meta-val ' + estop;
+    $('meta-avail').textContent = val(items, 'avail', '—');
+
+    // Spindle
+    $('spindle-rpm').textContent = num(items, 'sspeed');
+    $('spindle-ovr').textContent = num(items, 'ssovrd');
+
+    // Program
+    $('program-name').textContent = val(items, 'ncprog', '—');
+    $('m30-1').textContent     = val(items, 'm30c1', '—');
+    $('m30-2').textContent     = val(items, 'm30c2', '—');
+    $('loops-rem').textContent = val(items, 'lpremain', '—');
+
+    // Overrides
+    setBar('feed-bar',  'feed-val',  val(items, 'fdovrd'), { max: 200, mode: 'override' });
+    setBar('rapid-bar', 'rapid-val', val(items, 'rovrd'),  { max: 100, mode: 'override' });
+    setBar('sp-bar',    'sp-val',    val(items, 'ssovrd'), { max: 150, mode: 'override' });
+
+    // Axes (dynamic — adapts to 2-axis lathe vs 3-axis vs 5-axis mill)
+    renderPositions(items);
+    renderLoads(items);
+
+    // Tool (mill vs lathe)
+    renderTool(items, machine.type);
+
+    // Cycle times
+    $('this-cycle').textContent = fmtTime(val(items, 'tcycle', 0));
+    $('last-cycle').textContent = fmtTime(val(items, 'lcycle', 0));
+
+    // Macros + active codes
+    $('macro-1').textContent       = val(items, 'macdsp1', '—');
+    $('macro-2').textContent       = val(items, 'macdsp2', '—');
+    $('active-gcodes').textContent = val(items, 'gcodes', '—');
+    $('active-dhmt').textContent   = val(items, 'dhmtcodes', '—');
+
+    // Offsets
+    renderOffsets(items);
+
+    // Alarms
+    const alarms = val(items, 'aalarms', '');
+    const log = val(items, 'elog', '');
+    const alarmsEl = $('alarms-text');
+    if (alarms && alarms.toUpperCase() !== 'NONE' && alarms !== 'No active alarms') {
+        alarmsEl.textContent = '⚠  ACTIVE ALARMS:\n' + alarms +
+                               (log ? '\n\n--- EVENT LOG ---\n' + log : '');
+        alarmsEl.className = 'alarms-list has-alarms';
+    } else {
+        alarmsEl.textContent = log || 'No active alarms · No recent events';
+        alarmsEl.className = 'alarms-list';
+    }
+}
+
+// ---- Clock -----------------------------------------------------------------
+function tickClock() {
+    const now = new Date().toLocaleTimeString('tr-TR');
+    $('clock').textContent = now;
+    const tvClock = document.querySelector('.tv-overlay .tv-clock');
+    if (tvClock) tvClock.textContent = now;
+}
+
+// ---- TV mode setup ---------------------------------------------------------
+function setupTVMode() {
+    if (!TV_MODE) return;
+    document.body.classList.add('tv');
+
+    // Inject overlay (fleet status + clock, bottom-right)
+    const overlay = document.createElement('div');
+    overlay.className = 'tv-overlay';
+    overlay.innerHTML = `
+        <div class="tv-fleet">—</div>
+        <div class="tv-clock">--:--:--</div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Show one-time hint
+    const hint = document.createElement('div');
+    hint.className = 'tv-hint';
+    hint.textContent = 'TV MODE · press F for fullscreen · ESC to exit';
+    document.body.appendChild(hint);
+    setTimeout(() => hint.remove(), 5500);
+
+    // F = fullscreen toggle, ESC handled by browser natively
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'f' || e.key === 'F') {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+    });
+}
+
+// ---- Boot ------------------------------------------------------------------
+(async function init() {
+    setupTVMode();
+    tickClock();
+    setInterval(tickClock, 1000);
+    try {
+        await loadMachines();
+    } catch (e) {
+        $('machines-strip').innerHTML =
+            `<div style="font-family: var(--mono); padding: 20px; color: var(--alarm); grid-column: 1/-1;">Failed to load machines: ${escapeHTML(e.message)}</div>`;
+        return;
+    }
+    pollAll();
+    setInterval(pollAll, POLL_MS);
+})();
+</script>
+
+</body>
+</html>
